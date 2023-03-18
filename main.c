@@ -226,7 +226,6 @@ int main(void) {
         }
         if (should_exit) break;
     }
-
     free(byte_stream);
     return 0;
 }
