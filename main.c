@@ -4,16 +4,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "tv.c"
 
 #define WSYNC 2
+#define VBLANK 1
 #define COLUPF 8
 #define PF1 0x000E
 
 #define UPDATE_ZERO_FLAG(x) cpu.flags.z = (x == 0) ? 1:0
 #define INS_COMPLETE do{ip++; break;}while(0)
 #define MEMORY_SIZE 8192
-#define TIA_TICK(cycles) do{for (int i = 0; i < cycles*3; i++) {tv_tick(tv, &cpu.memory);}}while(0)
+#define TIA_TICK(cycles) do{for (int i = 0; i < cycles*3; i++) {tv_tick(tv, &cpu.memory, &cpu);}}while(0)
 static unsigned char memory[MEMORY_SIZE];
 
 typedef struct {
@@ -25,6 +25,7 @@ typedef struct {
     unsigned char *memory;
     uint8_t X, Y, A, SP;
 } Cpu;  
+#include "tv.c"
 
 int main(void) {
     FILE *file = fopen("roms/kernel_15.bin", "rb");
@@ -152,12 +153,16 @@ int main(void) {
                 if (byte_stream[ip] == WSYNC) {
                     wsync_count++;
                     while (!tv->scanline_complete) {
-                        if (!tv_tick(tv, &cpu.memory)) {
+                        if (!tv_tick(tv, &cpu.memory, &cpu)) {
                             should_exit = true;
                             break;
                         } 
                     }
                 }
+                if (byte_stream[ip] == VBLANK) {
+                    tv->scanline = 262;
+                }
+
                 cpu.memory[byte_stream[ip]] = cpu.A;
                 ip++;
                 break;
@@ -186,6 +191,7 @@ int main(void) {
             case 224:
                 ip++;
                 TIA_TICK(2);
+                
                 int8_t t = cpu.X - byte_stream[ip];
                 UPDATE_ZERO_FLAG(t);
                 ip++;
@@ -211,6 +217,7 @@ int main(void) {
                 ip++;
                 break;
             case 0xe6:
+                TIA_TICK(2);
                 ip++;
                 cpu.memory[byte_stream[ip]]++;
                 ip++;
@@ -220,7 +227,7 @@ int main(void) {
                 printf("%d\n", byte);
                 assert(false);
         }
-        if (!tv_tick(tv, &cpu.memory) || should_exit) {
+        if (!tv_tick(tv, &cpu.memory, &cpu) || should_exit) {
             should_exit = true;
             break;
         }
