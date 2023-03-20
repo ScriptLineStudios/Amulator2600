@@ -21,7 +21,7 @@ TV *new_tv() {
     TV *tv = malloc(sizeof(TV));
     tv->scanline = 0;
     tv->clock = 0;
-    tv->play_field_mirrored = true;
+    tv->play_field_mirrored = false;
     tv->pixels = malloc(sizeof(Uint32) * 160 * SCALE * 192 * SCALE);
     for (int i = 0; i < 160 * SCALE * 192 * SCALE; i++) {
         tv->pixels[i] = 0;
@@ -95,6 +95,13 @@ bool tv_tick(TV *tv, unsigned char **memory, Cpu *cpu) {
                 return false;
         }
     }
+
+
+
+    uint8_t CTRLPF = (*memory)[0x000A];
+
+    tv->play_field_mirrored = (bool)(CTRLPF & 0b00000001);
+
     tv->scanline_complete = false;
 
     tv->clock++;
